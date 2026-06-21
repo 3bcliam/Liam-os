@@ -1,0 +1,720 @@
+import { useState, useEffect, useRef } from “react”;
+
+// ── CONSTANTS ─────────────────────────────────────────────────────────────────
+const QUOTE = “There is someone out there that is currently out working you. One step ahead of you. Change that.”;
+
+const C = {
+bg: “#080808”, surface: “#111”, card: “#161616”, border: “#1e1e1e”,
+dim: “#1a1a1a”, text: “#f0ece4”, muted: “#444”, dim2: “#2a2a2a”,
+gold: “#d4b84a”, green: “#3db87a”, red: “#e05c4b”, blue: “#4a8fe8”,
+business: “#d4b84a”, fitness: “#3db87a”, relationships: “#e05c4b”,
+chest: “#e05c4b”, back: “#4a8fe8”, legs: “#d4b84a”,
+shoulders: “#8e5ce8”, arms: “#3db87a”, core: “#d4733a”,
+};
+
+// ── STORAGE ───────────────────────────────────────────────────────────────────
+function load(key, fallback) {
+try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
+}
+function persist(key, val) {
+try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+}
+
+// ── FONTS ─────────────────────────────────────────────────────────────────────
+const Fonts = () => <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />;
+
+// ── GYM DATA ──────────────────────────────────────────────────────────────────
+const GYM_DAYS = [
+{ id: “chest”, label: “Chest”, color: C.chest },
+{ id: “back”, label: “Back”, color: C.back },
+{ id: “legs”, label: “Legs”, color: C.legs },
+{ id: “shoulders”, label: “Shoulders”, color: C.shoulders },
+{ id: “arms”, label: “Arms”, color: C.arms },
+{ id: “core”, label: “Core”, color: C.core },
+];
+
+const EXERCISE_DB = {
+chest: [
+{ id: “bp”, name: “Barbell Bench Press”, equip: “Barbell”, target: “Chest · Triceps” },
+{ id: “dbp”, name: “Dumbbell Bench Press”, equip: “Dumbbells”, target: “Chest · Triceps” },
+{ id: “ibp”, name: “Incline Barbell Press”, equip: “Barbell”, target: “Upper Chest” },
+{ id: “idbp”, name: “Incline Dumbbell Press”, equip: “Dumbbells”, target: “Upper Chest” },
+{ id: “cfly”, name: “Cable Fly”, equip: “Cable”, target: “Chest” },
+{ id: “dbfly”, name: “Dumbbell Fly”, equip: “Dumbbells”, target: “Chest” },
+{ id: “dip”, name: “Chest Dip”, equip: “Bodyweight”, target: “Chest · Triceps” },
+{ id: “pecdeck”, name: “Pec Deck”, equip: “Machine”, target: “Chest” },
+],
+back: [
+{ id: “dl”, name: “Deadlift”, equip: “Barbell”, target: “Back · Hamstrings” },
+{ id: “row”, name: “Barbell Row”, equip: “Barbell”, target: “Back · Biceps” },
+{ id: “dbrow”, name: “Dumbbell Row”, equip: “Dumbbells”, target: “Back · Biceps” },
+{ id: “pullup”, name: “Pull Up”, equip: “Bodyweight”, target: “Back · Biceps” },
+{ id: “lat”, name: “Lat Pulldown”, equip: “Cable”, target: “Lats” },
+{ id: “seated_row”, name: “Seated Cable Row”, equip: “Cable”, target: “Back · Biceps” },
+{ id: “facepull”, name: “Face Pull”, equip: “Cable”, target: “Rear Delt · Traps” },
+{ id: “shrug”, name: “Barbell Shrug”, equip: “Barbell”, target: “Traps” },
+],
+legs: [
+{ id: “sq”, name: “Barbell Squat”, equip: “Barbell”, target: “Quads · Glutes” },
+{ id: “leg_press”, name: “Leg Press”, equip: “Machine”, target: “Quads · Glutes” },
+{ id: “rdl”, name: “Romanian Deadlift”, equip: “Barbell”, target: “Hamstrings · Glutes” },
+{ id: “leg_curl”, name: “Leg Curl”, equip: “Machine”, target: “Hamstrings” },
+{ id: “leg_ext”, name: “Leg Extension”, equip: “Machine”, target: “Quads” },
+{ id: “lunge”, name: “Dumbbell Lunge”, equip: “Dumbbells”, target: “Quads · Glutes” },
+{ id: “calf”, name: “Calf Raise”, equip: “Machine”, target: “Calves” },
+{ id: “goblet”, name: “Goblet Squat”, equip: “Dumbbell”, target: “Quads · Glutes” },
+],
+shoulders: [
+{ id: “ohp”, name: “Overhead Press”, equip: “Barbell”, target: “Shoulders · Triceps” },
+{ id: “dbohp”, name: “DB Shoulder Press”, equip: “Dumbbells”, target: “Shoulders” },
+{ id: “lr”, name: “Lateral Raise”, equip: “Dumbbells”, target: “Side Delts” },
+{ id: “rr”, name: “Reverse Fly”, equip: “Dumbbells”, target: “Rear Delts” },
+{ id: “arnold”, name: “Arnold Press”, equip: “Dumbbells”, target: “All Delts” },
+{ id: “clr”, name: “Cable Lateral Raise”, equip: “Cable”, target: “Side Delts” },
+{ id: “uprow”, name: “Upright Row”, equip: “Barbell”, target: “Delts · Traps” },
+],
+arms: [
+{ id: “bcurl”, name: “Barbell Curl”, equip: “Barbell”, target: “Biceps” },
+{ id: “dbcurl”, name: “Dumbbell Curl”, equip: “Dumbbells”, target: “Biceps” },
+{ id: “hammer”, name: “Hammer Curl”, equip: “Dumbbells”, target: “Biceps · Brachialis” },
+{ id: “preacher”, name: “Preacher Curl”, equip: “Barbell”, target: “Biceps” },
+{ id: “tri_push”, name: “Tricep Pushdown”, equip: “Cable”, target: “Triceps” },
+{ id: “skullcrush”, name: “Skull Crusher”, equip: “Barbell”, target: “Triceps” },
+{ id: “tri_dip”, name: “Tricep Dip”, equip: “Bodyweight”, target: “Triceps” },
+{ id: “ov_ext”, name: “Overhead Tricep Ext”, equip: “Dumbbell”, target: “Triceps” },
+],
+core: [
+{ id: “leg_raise”, name: “Hanging Leg Raise”, equip: “Bodyweight”, target: “Lower Abs” },
+{ id: “plank”, name: “Plank”, equip: “Bodyweight”, target: “Core” },
+{ id: “ab_wheel”, name: “Ab Wheel Rollout”, equip: “Ab Wheel”, target: “Core” },
+{ id: “russian”, name: “Russian Twist”, equip: “Bodyweight”, target: “Obliques” },
+{ id: “cable_crunch”, name: “Cable Crunch”, equip: “Cable”, target: “Abs” },
+{ id: “crunch”, name: “Crunch”, equip: “Bodyweight”, target: “Abs” },
+{ id: “situp”, name: “Decline Sit Up”, equip: “Bodyweight”, target: “Abs” },
+],
+};
+
+const DEFAULT_WORKOUTS = {
+chest: [“bp”,“idbp”,“cfly”,“dip”],
+back: [“row”,“lat”,“seated_row”,“facepull”],
+legs: [“sq”,“rdl”,“leg_press”,“calf”],
+shoulders: [“ohp”,“lr”,“rr”,“arnold”],
+arms: [“bcurl”,“dbcurl”,“tri_push”,“skullcrush”],
+core: [“leg_raise”,“plank”,“ab_wheel”,“russian”],
+};
+
+const REP_RANGES = { chest:[8,12], back:[8,12], legs:[8,15], shoulders:[10,15], arms:[10,15], core:[15,20] };
+const DEFAULT_SETS = { chest:4, back:4, legs:4, shoulders:3, arms:3, core:3 };
+const INCREMENTS = { bp:5,sq:5,dl:5,row:5,ohp:5,rdl:5,dbp:2.5,idbp:2.5,ibp:2.5,dbrow:2.5,dbohp:2.5,bcurl:2.5,skullcrush:2.5,leg_press:5 };
+const getIncrement = id => INCREMENTS[id] || 1.25;
+const getDefaultWeight = id => {
+if ([“bp”,“row”,“sq”,“dl”,“ohp”,“rdl”,“leg_press”].includes(id)) return 60;
+if ([“dbp”,“idbp”,“ibp”,“dbrow”,“dbohp”,“bcurl”,“skullcrush”].includes(id)) return 20;
+return 15;
+};
+
+const MORNING_TASKS = [
+{ id: “floor”, label: “Feet on the floor”, icon: “⚡” },
+{ id: “water”, label: “Drink water”, icon: “💧” },
+{ id: “pre”, label: “Pre-workout ready”, icon: “🥤” },
+{ id: “bag”, label: “Bag at the door”, icon: “🎒” },
+{ id: “gym”, label: “Get to the gym”, icon: “🏋️” },
+{ id: “train”, label: “Train hard”, icon: “🔥” },
+];
+
+function getTodayKey() { return new Date().toISOString().split(“T”)[0]; }
+
+function calcStreak(history) {
+let streak = 0;
+const today = getTodayKey();
+const check = new Date();
+while (true) {
+const key = check.toISOString().split(“T”)[0];
+if (key === today && !history[key]?.completed) { check.setDate(check.getDate() - 1); continue; }
+if (history[key]?.completed) { streak++; check.setDate(check.getDate() - 1); }
+else break;
+}
+return streak;
+}
+
+// ── ROOT ──────────────────────────────────────────────────────────────────────
+export default function App() {
+const [tab, setTab] = useState(“morning”);
+const [toast, setToast] = useState({ msg: “”, show: false });
+
+function showToast(msg) {
+setToast({ msg, show: true });
+setTimeout(() => setToast(t => ({ …t, show: false })), 2500);
+}
+
+const navItems = [
+{ id: “morning”, icon: “⚡”, label: “MORNING” },
+{ id: “lift”, icon: “🏋️”, label: “LIFT” },
+{ id: “pyramid”, icon: “🔺”, label: “PYRAMID” },
+];
+
+return (
+<div style={{ background: C.bg, minHeight: “100vh”, color: C.text, fontFamily: “‘DM Sans’, sans-serif”, paddingBottom: 72 }}>
+<Fonts />
+{tab === “morning” && <MorningTab showToast={showToast} />}
+{tab === “lift” && <LiftTab showToast={showToast} />}
+{tab === “pyramid” && <PyramidTab showToast={showToast} />}
+
+```
+  {/* Nav */}
+  <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.surface, borderTop: `1px solid ${C.border}`, display: "flex", zIndex: 99 }}>
+    {navItems.map(n => (
+      <button key={n.id} onClick={() => setTab(n.id)} style={{
+        flex: 1, padding: "10px 0 8px", background: "none", border: "none", cursor: "pointer",
+        color: tab === n.id ? C.text : C.muted,
+        borderTop: `2px solid ${tab === n.id ? C.gold : "transparent"}`,
+        display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+        fontFamily: "'Bebas Neue', sans-serif", fontSize: 11, letterSpacing: 2,
+      }}>
+        <span style={{ fontSize: 18 }}>{n.icon}</span>
+        {n.label}
+      </button>
+    ))}
+  </div>
+
+  {/* Toast */}
+  <div style={{
+    position: "fixed", bottom: 80, left: "50%",
+    transform: `translateX(-50%) translateY(${toast.show ? 0 : 60}px)`,
+    background: C.text, color: C.bg, padding: "10px 20px", borderRadius: 8,
+    fontFamily: "'Bebas Neue', sans-serif", fontSize: 15, letterSpacing: 1,
+    transition: "transform 0.3s", zIndex: 200, whiteSpace: "nowrap", pointerEvents: "none",
+  }}>{toast.msg}</div>
+</div>
+```
+
+);
+}
+
+// ── MORNING TAB ───────────────────────────────────────────────────────────────
+function MorningTab({ showToast }) {
+const [history, setHistory] = useState(() => load(“morning_v2”, {}));
+const [checked, setChecked] = useState(() => load(“morning_v2”, {})[getTodayKey()]?.checked || {});
+const [screen, setScreen] = useState(“launch”); // launch | checklist | done
+const [time, setTime] = useState(new Date());
+
+useEffect(() => { const t = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(t); }, []);
+
+const today = getTodayKey();
+const streak = calcStreak(history);
+const checkedCount = Object.values(checked).filter(Boolean).length;
+const progress = Math.round((checkedCount / MORNING_TASKS.length) * 100);
+const todayComplete = history[today]?.completed;
+
+function toggle(id) {
+const nc = { …checked, [id]: !checked[id] };
+setChecked(nc);
+const nh = { …history, [today]: { …history[today], checked: nc, date: today } };
+if (Object.values(nc).filter(Boolean).length === MORNING_TASKS.length) {
+nh[today].completed = true;
+setHistory(nh);
+persist(“morning_v2”, nh);
+setTimeout(() => setScreen(“done”), 400);
+} else {
+setHistory(nh);
+persist(“morning_v2”, nh);
+}
+}
+
+const timeStr = time.toLocaleTimeString(“en-AU”, { hour: “2-digit”, minute: “2-digit”, hour12: true });
+const dateStr = time.toLocaleDateString(“en-AU”, { weekday: “long”, day: “numeric”, month: “long” });
+
+if (screen === “launch”) return (
+<div onClick={() => setScreen(“checklist”)} style={{
+minHeight: “100vh”, display: “flex”, flexDirection: “column”, alignItems: “center”,
+justifyContent: “center”, padding: 32, cursor: “pointer”, position: “relative”, overflow: “hidden”,
+background: “#080808”,
+}}>
+<div style={{ position: “absolute”, inset: 0, backgroundImage: “linear-gradient(rgba(255,255,255,0.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.018) 1px,transparent 1px)”, backgroundSize: “44px 44px” }} />
+<div style={{ position: “relative”, zIndex: 1, width: “100%”, maxWidth: 360, display: “flex”, flexDirection: “column”, alignItems: “center” }}>
+<div style={{ fontFamily: “‘Bebas Neue’, sans-serif”, fontSize: 80, letterSpacing: 4, color: C.text, lineHeight: 1 }}>{timeStr}</div>
+<div style={{ fontSize: 11, letterSpacing: 3, textTransform: “uppercase”, color: C.muted, marginTop: 6 }}>{dateStr}</div>
+<div style={{ width: 48, height: 1, background: C.gold, margin: “28px 0” }} />
+<div style={{ fontWeight: 600, fontSize: 18, color: C.text, textAlign: “center”, lineHeight: 1.6, letterSpacing: 0.2 }}>”{QUOTE}”</div>
+{streak > 0 && (
+<div style={{ marginTop: 36, display: “flex”, alignItems: “center”, gap: 12 }}>
+<div style={{ fontFamily: “‘Bebas Neue’, sans-serif”, fontSize: 52, color: C.gold, lineHeight: 1 }}>{streak}</div>
+<div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: “uppercase”, lineHeight: 1.6 }}>Day<br />Streak</div>
+<div style={{ fontSize: 28 }}>🔥</div>
+</div>
+)}
+<div style={{ position: “absolute”, bottom: -80, fontSize: 11, letterSpacing: 3, textTransform: “uppercase”, color: C.muted }}>Tap to lock in</div>
+</div>
+</div>
+);
+
+if (screen === “done”) return (
+<div style={{ minHeight: “100vh”, display: “flex”, flexDirection: “column”, alignItems: “center”, justifyContent: “center”, padding: 32, background: “#080808” }}>
+<div style={{ fontSize: 72, marginBottom: 16 }}>💪</div>
+<div style={{ fontFamily: “‘Bebas Neue’, sans-serif”, fontSize: 56, letterSpacing: 4, color: C.green, lineHeight: 1, textAlign: “center” }}>Session<br />Complete</div>
+<div style={{ fontFamily: “‘Bebas Neue’, sans-serif”, fontSize: 22, color: C.gold, marginTop: 16, letterSpacing: 2 }}>{streak} Day Streak 🔥</div>
+<div style={{ fontSize: 14, color: C.muted, marginTop: 12, textAlign: “center”, lineHeight: 1.7, maxWidth: 260 }}>One step ahead of everyone who stayed in bed.</div>
+<button onClick={() => setScreen(“checklist”)} style={{ marginTop: 40, padding: “12px 28px”, background: “none”, border: `1px solid ${C.border}`, borderRadius: 8, color: C.muted, fontSize: 11, letterSpacing: 2, textTransform: “uppercase”, cursor: “pointer” }}>View Checklist</button>
+</div>
+);
+
+return (
+<div style={{ paddingBottom: 20 }}>
+<div style={{ padding: “24px 22px 0” }}>
+<div style={{ fontFamily: “‘Bebas Neue’, sans-serif”, fontSize: 11, letterSpacing: 4, color: C.muted, textTransform: “uppercase” }}>{dateStr}</div>
+<div style={{ fontFamily: “‘Bebas Neue’, sans-serif”, fontSize: 36, letterSpacing: 2, lineHeight: 1.1, marginTop: 4 }}>Morning<br />Lock In</div>
+</div>
+
+```
+  {/* Progress */}
+  <div style={{ margin: "18px 22px 0" }}>
+    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: C.muted, marginBottom: 7 }}>
+      <span>Progress</span>
+      <span style={{ color: progress === 100 ? C.green : C.text }}>{checkedCount}/{MORNING_TASKS.length}</span>
+    </div>
+    <div style={{ height: 3, background: C.border, borderRadius: 2 }}>
+      <div style={{ height: "100%", width: `${progress}%`, background: progress === 100 ? C.green : C.gold, borderRadius: 2, transition: "width 0.35s" }} />
+    </div>
+  </div>
+
+  {/* Quote */}
+  <div style={{ margin: "14px 22px 0", padding: "13px 15px", background: C.dim, borderRadius: 9, borderLeft: `3px solid ${C.gold}` }}>
+    <div style={{ fontSize: 13, lineHeight: 1.65, color: C.text, fontWeight: 500 }}>"{QUOTE}"</div>
+  </div>
+
+  {/* Tasks */}
+  <div style={{ padding: "14px 22px 0" }}>
+    {MORNING_TASKS.map((task, i) => {
+      const done = checked[task.id];
+      return (
+        <div key={task.id} onClick={() => toggle(task.id)} style={{
+          display: "flex", alignItems: "center", gap: 14, padding: "15px 0",
+          borderBottom: i < MORNING_TASKS.length - 1 ? `1px solid ${C.border}` : "none",
+          cursor: "pointer", opacity: done ? 0.45 : 1, transition: "opacity 0.2s",
+        }}>
+          <div style={{ width: 26, height: 26, borderRadius: "50%", border: `2px solid ${done ? C.green : C.border}`, background: done ? "rgba(61,184,122,0.15)" : "none", display: "flex", alignItems: "center", justifyContent: "center", color: C.green, fontSize: 13, flexShrink: 0, transition: "all 0.2s" }}>{done ? "✓" : ""}</div>
+          <div style={{ fontSize: 20 }}>{task.icon}</div>
+          <div style={{ fontWeight: 500, fontSize: 16, textDecoration: done ? "line-through" : "none", color: done ? C.muted : C.text }}>{task.label}</div>
+        </div>
+      );
+    })}
+  </div>
+
+  {/* Streak */}
+  <div style={{ margin: "20px 22px 0", padding: 18, background: C.dim, borderRadius: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <div>
+      <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 11, letterSpacing: 3, color: C.muted, textTransform: "uppercase" }}>Streak</div>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 4 }}>
+        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 48, color: C.gold, lineHeight: 1 }}>{streak}</div>
+        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 16, color: C.muted }}>Days 🔥</div>
+      </div>
+    </div>
+    <div>
+      <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 11, letterSpacing: 3, color: C.muted, textTransform: "uppercase", marginBottom: 8, textAlign: "right" }}>This Week</div>
+      <div style={{ display: "flex", gap: 5 }}>
+        {Array.from({ length: 7 }).map((_, i) => {
+          const d = new Date(); d.setDate(d.getDate() - (6 - i));
+          const done = history[d.toISOString().split("T")[0]]?.completed;
+          return <div key={i} style={{ width: 12, height: 12, borderRadius: 3, background: done ? C.green : C.border }} />;
+        })}
+      </div>
+    </div>
+  </div>
+
+  <div style={{ margin: "16px 22px 0", textAlign: "center" }}>
+    <button onClick={() => setScreen("launch")} style={{ padding: "9px 22px", background: "none", border: `1px solid ${C.border}`, borderRadius: 7, color: C.muted, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>Back to Launch</button>
+  </div>
+</div>
+```
+
+);
+}
+
+// ── LIFT TAB ──────────────────────────────────────────────────────────────────
+function LiftTab({ showToast }) {
+const [gs, setGs] = useState(() => load(“lift_v4”, { activeDay: “chest”, workouts: JSON.parse(JSON.stringify(DEFAULT_WORKOUTS)), history: {}, sessionCounts: {}, progress: {} }));
+const [sets, setSets] = useState({});
+const [openEx, setOpenEx] = useState(0);
+const [modal, setModal] = useState(null);
+const [search, setSearch] = useState(””);
+const [summary, setSummary] = useState(null);
+
+const muscle = gs.activeDay;
+const day = GYM_DAYS.find(d => d.id === muscle);
+const sessionNum = (gs.sessionCounts[muscle] || 0) + 1;
+const [minRep, maxRep] = REP_RANGES[muscle];
+
+useEffect(() => { persist(“lift_v4”, gs); }, [gs]);
+
+useEffect(() => {
+const ns = {};
+gs.workouts[muscle].forEach((exId, exIdx) => {
+const next = calcNext(exId, muscle, getLastSets(exId, muscle));
+for (let i = 0; i < DEFAULT_SETS[muscle]; i++) ns[`${muscle}-${exIdx}-${i}`] = { weight: next.weight, reps: next.reps, done: false };
+});
+setSets(ns); setSummary(null); setOpenEx(0);
+}, [muscle, gs.workouts]);
+
+function getLastSets(exId, m) {
+const sessions = Object.values(gs.history).filter(s => s.muscle === m).sort((a,b) => b.sessionNum - a.sessionNum);
+for (const s of sessions) { const ex = s.exercises?.find(e => e.id === exId); if (ex?.sets?.length) return ex.sets; }
+return [];
+}
+
+function calcNext(exId, m, last) {
+const prog = gs.progress[exId] || { weight: getDefaultWeight(exId), reps: REP_RANGES[m][0] };
+const [mn, mx] = REP_RANGES[m];
+if (!last.length) return { weight: prog.weight, reps: mn, status: “start” };
+const allMax = last.every(s => parseInt(s.reps) >= mx && parseFloat(s.weight) >= prog.weight);
+if (allMax) return { weight: prog.weight + getIncrement(exId), reps: mn, status: “increase”, prev: prog.weight, inc: getIncrement(exId) };
+const avg = last.reduce((a,b) => a + parseInt(b.reps||mn), 0) / last.length;
+return { weight: prog.weight, reps: Math.min(mx, Math.round(avg)+1), status: “progress” };
+}
+
+function updateSet(key, field, val) { setSets(prev => ({ …prev, [key]: { …prev[key], [field]: val } })); }
+function addSet(exIdx) {
+const count = Object.keys(sets).filter(k => k.startsWith(`${muscle}-${exIdx}-`)).length;
+const next = calcNext(gs.workouts[muscle][exIdx], muscle, getLastSets(gs.workouts[muscle][exIdx], muscle));
+setSets(prev => ({ …prev, [`${muscle}-${exIdx}-${count}`]: { weight: next.weight, reps: next.reps, done: false } }));
+}
+
+function completeSession() {
+const exercises = gs.workouts[muscle].map((exId, exIdx) => ({ id: exId, sets: Object.entries(sets).filter(([k]) => k.startsWith(`${muscle}-${exIdx}-`)).map(([,v]) => v) }));
+const np = { …gs.progress };
+const sd = [];
+exercises.forEach(({ id: exId, sets: exSets }) => {
+const [mn, mx] = REP_RANGES[muscle];
+if (!np[exId]) np[exId] = { weight: getDefaultWeight(exId), reps: mn };
+const allMax = exSets.length > 0 && exSets.every(s => parseInt(s.reps) >= mx);
+if (allMax) { np[exId].weight += getIncrement(exId); np[exId].reps = mn; }
+else if (exSets.length) { const avg = exSets.reduce((a,b) => a+parseInt(b.reps||mn),0)/exSets.length; np[exId].reps = Math.min(mx, Math.round(avg)+1); }
+const vol = exSets.reduce((a,b) => a+parseFloat(b.weight||0)*parseInt(b.reps||0),0);
+sd.push({ name: EXERCISE_DB[muscle].find(e=>e.id===exId)?.name||exId, sets: exSets.length, vol: Math.round(vol) });
+});
+setGs(prev => ({ …prev, history: { …prev.history, [`${muscle}_${sessionNum}`]: { muscle, sessionNum, date: new Date().toISOString(), exercises } }, sessionCounts: { …prev.sessionCounts, [muscle]: sessionNum }, progress: np }));
+setSummary(sd);
+showToast(“Session saved 💪”);
+}
+
+function swapEx(exIdx, newId) {
+setGs(prev => ({ …prev, workouts: { …prev.workouts, [muscle]: prev.workouts[muscle].map((id,i) => i===exIdx?newId:id) } }));
+setModal(null); showToast(“Exercise updated”);
+}
+
+const filtered = (EXERCISE_DB[muscle]||[]).filter(e => !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.equip.toLowerCase().includes(search.toLowerCase()));
+
+return (
+<div>
+<div style={{ display: “flex”, justifyContent: “space-between”, alignItems: “center”, padding: “22px 22px 0” }}>
+<div style={{ fontFamily: “‘Bebas Neue’, sans-serif”, fontSize: 42, letterSpacing: 2, color: day.color }}>LIFT</div>
+<div style={{ textAlign: “right” }}>
+<div style={{ fontSize: 10, letterSpacing: 2, textTransform: “uppercase”, color: C.muted }}>Today</div>
+<div style={{ fontFamily: “‘Bebas Neue’, sans-serif”, fontSize: 18 }}>{new Date().toLocaleDateString(“en-AU”,{day:“numeric”,month:“short”})}</div>
+</div>
+</div>
+
+```
+  <div style={{ display: "flex", gap: 7, padding: "14px 22px 0", overflowX: "auto", scrollbarWidth: "none" }}>
+    {GYM_DAYS.map(d => (
+      <button key={d.id} onClick={() => setGs(p=>({...p,activeDay:d.id}))} style={{ flexShrink:0, padding:"8px 13px", borderRadius:6, border:`1px solid ${d.id===muscle?"transparent":C.border}`, background:d.id===muscle?d.color:C.surface, color:d.id===muscle?C.bg:C.muted, fontFamily:"'Bebas Neue',sans-serif", fontSize:13, letterSpacing:1, cursor:"pointer", whiteSpace:"nowrap" }}>{d.label}</button>
+    ))}
+  </div>
+
+  <div style={{ margin:"14px 22px 0", padding:15, borderRadius:10, border:`1px solid ${C.border}`, background:C.card, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+    <div>
+      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:26, color:day.color }}>{day.label}</div>
+      <div style={{ fontSize:11, color:C.muted, letterSpacing:1, textTransform:"uppercase", marginTop:2 }}>Session {sessionNum}</div>
+    </div>
+    <div style={{ fontSize:11, color:C.muted, textAlign:"right", maxWidth:130, lineHeight:1.5 }}>
+      <span style={{ color:C.text, fontWeight:600, display:"block" }}>Double Progression</span>Hit top rep → weight up
+    </div>
+  </div>
+
+  <div style={{ padding:"12px 22px 0" }}>
+    {gs.workouts[muscle].map((exId, exIdx) => {
+      const ex = EXERCISE_DB[muscle].find(e=>e.id===exId)||{name:exId,equip:"",target:""};
+      const next = calcNext(exId, muscle, getLastSets(exId, muscle));
+      const setKeys = Object.keys(sets).filter(k=>k.startsWith(`${muscle}-${exIdx}-`));
+      const isOpen = openEx === exIdx;
+      const progMsg = next.status==="increase"?`↑ ${next.prev}kg → ${next.weight}kg`:next.status==="start"?`Start: ${next.weight}kg`:`Target: ${next.weight}kg × ${minRep}–${maxRep}`;
+      return (
+        <div key={exIdx} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:10, marginBottom:10, overflow:"hidden" }}>
+          <div onClick={()=>setOpenEx(isOpen?-1:exIdx)} style={{ display:"flex", alignItems:"center", padding:"12px 14px", gap:10, cursor:"pointer" }}>
+            <div style={{ width:22,height:22,borderRadius:"50%",background:day.color,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Bebas Neue',sans-serif",fontSize:11,color:C.bg,flexShrink:0 }}>{exIdx+1}</div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontWeight:600, fontSize:14 }}>{ex.name}</div>
+              <div style={{ fontSize:11, color:C.muted, marginTop:1 }}>{ex.target} · {ex.equip}</div>
+            </div>
+            <button onClick={e=>{e.stopPropagation();setModal({exIdx});setSearch("");}} style={{ padding:"5px 9px",background:C.surface,border:`1px solid ${C.border}`,borderRadius:5,color:C.muted,fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer" }}>swap</button>
+            <span style={{ color:C.muted,marginLeft:6,transform:isOpen?"rotate(180deg)":"none",display:"inline-block",transition:"transform 0.2s" }}>▾</span>
+          </div>
+          {isOpen && (
+            <div style={{ padding:"0 14px 14px" }}>
+              <div style={{ background:C.surface,borderRadius:6,padding:"8px 12px",marginBottom:10,display:"flex",justifyContent:"space-between",fontSize:12 }}>
+                <span style={{ color:C.muted }}>Next target</span>
+                <span style={{ fontWeight:600,color:day.color }}>{progMsg}</span>
+              </div>
+              <div style={{ display:"grid",gridTemplateColumns:"24px 1fr 1fr 50px 32px",gap:6,padding:"0 0 6px",fontSize:10,letterSpacing:1.5,textTransform:"uppercase",color:C.muted }}>
+                <span>#</span><span style={{textAlign:"center"}}>kg</span><span style={{textAlign:"center"}}>Reps</span><span style={{textAlign:"center"}}>Range</span><span></span>
+              </div>
+              {setKeys.map((key, i) => {
+                const set = sets[key]||{};
+                return (
+                  <div key={key} style={{ display:"grid",gridTemplateColumns:"24px 1fr 1fr 50px 32px",gap:6,alignItems:"center",marginBottom:6 }}>
+                    <span style={{ fontFamily:"'Bebas Neue',sans-serif",fontSize:14,color:C.muted,textAlign:"center" }}>{i+1}</span>
+                    <input type="number" value={set.weight??""} onChange={e=>updateSet(key,"weight",e.target.value)} inputMode="decimal" style={{ background:set.done?"#0d0d0d":C.surface,border:`1px solid ${set.done?C.border:C.dim2}`,borderRadius:6,color:C.text,fontSize:15,fontWeight:700,padding:"9px 6px",textAlign:"center",width:"100%" }} />
+                    <input type="number" value={set.reps??""} onChange={e=>updateSet(key,"reps",e.target.value)} inputMode="numeric" style={{ background:set.done?"#0d0d0d":C.surface,border:`1px solid ${set.done?C.border:C.dim2}`,borderRadius:6,color:C.text,fontSize:15,fontWeight:700,padding:"9px 6px",textAlign:"center",width:"100%" }} />
+                    <div style={{ fontSize:10,color:C.muted,textAlign:"center",lineHeight:1.4 }}>{minRep}–{maxRep}<br/>reps</div>
+                    <button onClick={()=>updateSet(key,"done",!set.done)} style={{ width:32,height:32,borderRadius:"50%",border:`2px solid ${set.done?C.green:C.border}`,background:set.done?"rgba(61,184,122,0.12)":"none",color:set.done?C.green:C.muted,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center" }}>✓</button>
+                  </div>
+                );
+              })}
+              <button onClick={()=>addSet(exIdx)} style={{ width:"100%",padding:8,background:"none",border:`1px dashed ${C.border}`,borderRadius:6,color:C.muted,fontSize:11,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",marginTop:2 }}>+ Add Set</button>
+            </div>
+          )}
+        </div>
+      );
+    })}
+  </div>
+
+  <button onClick={completeSession} style={{ margin:"12px 22px 0",width:"calc(100% - 44px)",padding:15,border:"none",borderRadius:10,background:day.color,color:C.bg,fontFamily:"'Bebas Neue',sans-serif",fontSize:17,letterSpacing:2,cursor:"pointer" }}>Complete Session</button>
+
+  {summary && (
+    <div style={{ margin:"12px 22px 0",background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:16 }}>
+      <div style={{ fontFamily:"'Bebas Neue',sans-serif",fontSize:13,letterSpacing:3,color:C.muted,marginBottom:10 }}>Session Summary</div>
+      {summary.map((row,i)=>(
+        <div key={i} style={{ display:"flex",justifyContent:"space-between",fontSize:13,padding:"6px 0",borderBottom:i<summary.length-1?`1px solid ${C.border}`:"none" }}>
+          <span style={{ color:C.muted }}>{row.name}</span>
+          <span style={{ fontWeight:600 }}>{row.sets} sets · {row.vol}kg vol</span>
+        </div>
+      ))}
+    </div>
+  )}
+
+  {modal && (
+    <div onClick={e=>e.target===e.currentTarget&&setModal(null)} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:100,display:"flex",alignItems:"flex-end" }}>
+      <div style={{ background:C.card,border:`1px solid ${C.border}`,borderRadius:"14px 14px 0 0",width:"100%",maxHeight:"78vh",display:"flex",flexDirection:"column" }}>
+        <div style={{ padding:"18px 18px 12px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:`1px solid ${C.border}` }}>
+          <span style={{ fontFamily:"'Bebas Neue',sans-serif",fontSize:20,letterSpacing:1 }}>Change Exercise</span>
+          <button onClick={()=>setModal(null)} style={{ width:30,height:30,borderRadius:"50%",border:`1px solid ${C.border}`,background:"none",color:C.text,cursor:"pointer",fontSize:16 }}>✕</button>
+        </div>
+        <input autoFocus value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search..." style={{ margin:"10px 18px",padding:"10px 14px",background:C.surface,border:`1px solid ${C.border}`,borderRadius:8,color:C.text,fontSize:14,width:"calc(100% - 36px)" }} />
+        <div style={{ overflowY:"auto",padding:"0 18px 18px" }}>
+          {filtered.map(ex=>(
+            <div key={ex.id} onClick={()=>swapEx(modal.exIdx,ex.id)} style={{ padding:"13px 0",borderBottom:`1px solid ${C.border}`,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+              <div>
+                <div style={{ fontWeight:600,fontSize:14 }}>{ex.name}</div>
+                <div style={{ fontSize:11,color:C.muted,marginTop:2 }}>{ex.equip} · {ex.target}</div>
+              </div>
+              <span style={{ fontSize:10,padding:"3px 7px",borderRadius:4,background:C.surface,color:C.muted,letterSpacing:1,textTransform:"uppercase" }}>{ex.equip}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )}
+</div>
+```
+
+);
+}
+
+// ── PYRAMID TAB ───────────────────────────────────────────────────────────────
+function PyramidTab({ showToast }) {
+const [entries, setEntries] = useState(() => load(“pyramid_v3”, []));
+const [view, setView] = useState(“log”);
+const [logType, setLogType] = useState(“daily”);
+const [scores, setScores] = useState({ business:50, fitness:50, relationships:50 });
+const [notes, setNotes] = useState(””);
+const radarRef = useRef(null);
+const triRef = useRef(null);
+const trendRef = useRef(null);
+
+useEffect(() => { persist(“pyramid_v3”, entries); }, [entries]);
+useEffect(() => { if (view===“diagram”) setTimeout(drawAll, 100); }, [view, entries]);
+
+function saveEntry() {
+const entry = { date: new Date().toLocaleDateString(“en-AU”,{day:“2-digit”,month:“short”,year:“numeric”}), type:logType, notes, …scores, overall:Math.round((scores.business+scores.fitness+scores.relationships)/3), ts:Date.now() };
+setEntries(prev => [entry, …prev]);
+setNotes(””); showToast(“Entry saved ✓”);
+}
+
+const PC = { business:C.business, fitness:C.fitness, relationships:C.relationships };
+const latest = entries[0];
+
+function drawAll() {
+if (!latest) return;
+drawRadar(latest); drawTriangle(latest);
+drawTrend([…entries].slice(0,14).reverse());
+}
+
+function drawRadar(e) {
+const canvas = radarRef.current; if(!canvas) return;
+const ctx=canvas.getContext(“2d”),W=canvas.width,H=canvas.height,cx=W/2,cy=H/2,R=75;
+ctx.clearRect(0,0,W,H);
+const angles=[-Math.PI/2,Math.PI/6,5*Math.PI/6];
+const colors=[C.business,C.fitness,C.relationships];
+const vals=[e.business/100,e.fitness/100,e.relationships/100];
+for(let g=1;g<=4;g++){ctx.beginPath();angles.forEach((a,i)=>{const r=R*g/4;i===0?ctx.moveTo(cx+r*Math.cos(a),cy+r*Math.sin(a)):ctx.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a));});ctx.closePath();ctx.strokeStyle=C.border;ctx.lineWidth=1;ctx.stroke();}
+angles.forEach(a=>{ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+R*Math.cos(a),cy+R*Math.sin(a));ctx.strokeStyle=C.dim2;ctx.lineWidth=1;ctx.stroke();});
+ctx.beginPath();vals.forEach((v,i)=>{const x=cx+R*v*Math.cos(angles[i]),y=cy+R*v*Math.sin(angles[i]);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+ctx.closePath();ctx.fillStyle=“rgba(240,236,228,0.07)”;ctx.fill();ctx.strokeStyle=“rgba(240,236,228,0.4)”;ctx.lineWidth=1.5;ctx.stroke();
+vals.forEach((v,i)=>{const x=cx+R*v*Math.cos(angles[i]),y=cy+R*v*Math.sin(angles[i]);ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fillStyle=colors[i];ctx.fill();});
+ctx.font=“11px DM Sans”;ctx.textAlign=“center”;
+[“Business”,“Fitness”,“Relationships”].forEach((l,i)=>{ctx.fillStyle=colors[i];ctx.fillText(l,cx+(R+20)*Math.cos(angles[i]),cy+(R+20)*Math.sin(angles[i])+4);});
+}
+
+function drawTriangle(e) {
+const canvas=triRef.current;if(!canvas)return;
+const ctx=canvas.getContext(“2d”),W=canvas.width,H=canvas.height,cx=W/2;
+ctx.clearRect(0,0,W,H);
+const top={x:cx,y:28},left={x:44,y:H-36},right={x:W-44,y:H-36};
+const vals=[e.business/100,e.relationships/100,e.fitness/100];
+const colors=[C.business,C.relationships,C.fitness];
+const pts=[top,left,right],mid={x:cx,y:H/2+16};
+ctx.beginPath();ctx.moveTo(top.x,top.y);ctx.lineTo(left.x,left.y);ctx.lineTo(right.x,right.y);ctx.closePath();ctx.strokeStyle=C.border;ctx.lineWidth=1;ctx.stroke();
+ctx.beginPath();vals.forEach((v,i)=>{const ox=mid.x+(pts[i].x-mid.x)*v,oy=mid.y+(pts[i].y-mid.y)*v;i===0?ctx.moveTo(ox,oy):ctx.lineTo(ox,oy);});
+ctx.closePath();ctx.fillStyle=“rgba(240,236,228,0.06)”;ctx.fill();ctx.strokeStyle=“rgba(240,236,228,0.35)”;ctx.lineWidth=1.5;ctx.stroke();
+vals.forEach((v,i)=>{const ox=mid.x+(pts[i].x-mid.x)*v,oy=mid.y+(pts[i].y-mid.y)*v;ctx.beginPath();ctx.arc(ox,oy,6,0,Math.PI*2);ctx.fillStyle=colors[i];ctx.fill();});
+const loffs=[{x:top.x,y:top.y-14},{x:left.x-8,y:left.y+16},{x:right.x+8,y:right.y+16}];
+ctx.textAlign=“center”;
+[“BUSINESS”,“RELATIONSHIPS”,“FITNESS”].forEach((l,i)=>{ctx.font=“bold 10px DM Sans”;ctx.fillStyle=colors[i];ctx.fillText(l,loffs[i].x,loffs[i].y);ctx.font=“13px ‘Bebas Neue’”;ctx.fillText(Math.round(vals[i]*100)+”%”,loffs[i].x,loffs[i].y+14);});
+}
+
+function drawTrend(data) {
+const canvas=trendRef.current;if(!canvas||data.length<2)return;
+const ctx=canvas.getContext(“2d”),W=canvas.offsetWidth||340,H=140;
+canvas.width=W;canvas.height=H;ctx.clearRect(0,0,W,H);
+const pad={t:12,r:16,b:22,l:28},gW=W-pad.l-pad.r,gH=H-pad.t-pad.b;
+[[C.business,“business”],[C.fitness,“fitness”],[C.relationships,“relationships”]].forEach(([color,key])=>{
+ctx.beginPath();data.forEach((e,i)=>{const x=pad.l+(i/(data.length-1))*gW,y=pad.t+gH-(e[key]/100)*gH;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+ctx.strokeStyle=color;ctx.lineWidth=2;ctx.stroke();
+data.forEach((e,i)=>{const x=pad.l+(i/(data.length-1))*gW,y=pad.t+gH-(e[key]/100)*gH;ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();});
+});
+ctx.fillStyle=C.muted;ctx.font=“10px DM Sans”;ctx.textAlign=“center”;
+data.forEach((e,i)=>{if(i%Math.ceil(data.length/6)===0||i===data.length-1){const x=pad.l+(i/(data.length-1))*gW;ctx.fillText(e.date.split(” “).slice(0,2).join(” “),x,H-4);}});
+}
+
+return (
+<div>
+<div style={{ padding:“22px 22px 0”,display:“flex”,justifyContent:“space-between”,alignItems:“center” }}>
+<div>
+<div style={{ fontFamily:”‘Bebas Neue’,sans-serif”,fontSize:38,letterSpacing:3,lineHeight:1 }}>The Pyramid</div>
+<div style={{ fontSize:10,letterSpacing:2,textTransform:“uppercase”,color:C.muted,marginTop:3 }}>Business · Fitness · Relationships</div>
+</div>
+{latest && <div style={{ textAlign:“right” }}>
+<div style={{ fontFamily:”‘Bebas Neue’,sans-serif”,fontSize:38,lineHeight:1 }}>{latest.overall}%</div>
+<div style={{ fontSize:10,color:C.muted,letterSpacing:1 }}>Last Entry</div>
+</div>}
+</div>
+
+```
+  <div style={{ display:"flex",gap:4,margin:"14px 22px 0",background:C.surface,borderRadius:8,padding:4,border:`1px solid ${C.border}` }}>
+    {["log","diagram","history"].map(v=>(
+      <button key={v} onClick={()=>setView(v)} style={{ flex:1,padding:"9px 0",background:view===v?C.border:"none",border:"none",borderRadius:5,color:view===v?C.text:C.muted,fontFamily:"'Bebas Neue',sans-serif",fontSize:13,letterSpacing:2,cursor:"pointer",textTransform:"uppercase" }}>{v}</button>
+    ))}
+  </div>
+
+  {view==="log" && (
+    <div style={{ padding:"14px 22px 0" }}>
+      <div style={{ background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:18 }}>
+        {["business","fitness","relationships"].map(pillar=>(
+          <div key={pillar} style={{ marginBottom:20 }}>
+            <div style={{ display:"flex",justifyContent:"space-between",marginBottom:8 }}>
+              <span style={{ fontFamily:"'Bebas Neue',sans-serif",fontSize:18,letterSpacing:1,color:PC[pillar],textTransform:"uppercase" }}>{pillar}</span>
+              <span style={{ fontFamily:"'Bebas Neue',sans-serif",fontSize:24,color:PC[pillar] }}>{scores[pillar]}%</span>
+            </div>
+            <div style={{ position:"relative",height:6,background:C.border,borderRadius:3 }}>
+              <div style={{ position:"absolute",top:0,left:0,height:"100%",width:`${scores[pillar]}%`,background:PC[pillar],borderRadius:3,transition:"width 0.1s" }} />
+              <input type="range" min="0" max="100" value={scores[pillar]} onChange={e=>setScores(p=>({...p,[pillar]:parseInt(e.target.value)}))} style={{ position:"absolute",top:-7,left:0,width:"100%",opacity:0,height:20,cursor:"pointer",zIndex:2 }} />
+            </div>
+          </div>
+        ))}
+        <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Notes (optional)..." rows={3} style={{ width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:6,color:C.text,fontSize:14,padding:12,resize:"none",fontFamily:"inherit",marginBottom:12 }} />
+        <div style={{ display:"flex",gap:8,marginBottom:8 }}>
+          {["daily","weekly"].map(t=>(
+            <button key={t} onClick={()=>setLogType(t)} style={{ flex:1,padding:11,background:logType===t?C.dim:C.surface,border:`1px solid ${logType===t?C.text:C.border}`,borderRadius:6,color:logType===t?C.text:C.muted,fontFamily:"'Bebas Neue',sans-serif",fontSize:14,letterSpacing:2,cursor:"pointer",textTransform:"uppercase" }}>{t}</button>
+          ))}
+        </div>
+        <button onClick={saveEntry} style={{ width:"100%",padding:14,background:C.text,color:C.bg,border:"none",borderRadius:8,fontFamily:"'Bebas Neue',sans-serif",fontSize:16,letterSpacing:3,cursor:"pointer" }}>Save Entry</button>
+      </div>
+    </div>
+  )}
+
+  {view==="diagram" && (
+    <div style={{ padding:"14px 22px 0" }}>
+      {!latest ? <div style={{ padding:40,textAlign:"center",color:C.muted,fontSize:13 }}>No entries yet — log your first check-in.</div> : (
+        <>
+          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:12 }}>
+            {["business","fitness","relationships"].map(p=>(
+              <div key={p} style={{ background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"14px 8px",textAlign:"center" }}>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif",fontSize:30,color:PC[p],lineHeight:1 }}>{latest[p]}%</div>
+                <div style={{ fontSize:10,color:C.muted,letterSpacing:1,textTransform:"uppercase",marginTop:3 }}>{p}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:16,textAlign:"center",marginBottom:12 }}>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif",fontSize:64,lineHeight:1 }}>{latest.overall}%</div>
+            <div style={{ fontSize:11,color:C.muted,letterSpacing:2,textTransform:"uppercase",marginTop:4 }}>Master Index</div>
+          </div>
+          <div style={{ background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:16,marginBottom:12,display:"flex",flexDirection:"column",alignItems:"center" }}>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif",fontSize:13,letterSpacing:3,color:C.muted,alignSelf:"flex-start",marginBottom:10 }}>Radar</div>
+            <canvas ref={radarRef} width={220} height={220} />
+          </div>
+          <div style={{ background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:16,marginBottom:12,display:"flex",flexDirection:"column",alignItems:"center" }}>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif",fontSize:13,letterSpacing:3,color:C.muted,alignSelf:"flex-start",marginBottom:10 }}>Triangle</div>
+            <canvas ref={triRef} width={300} height={260} style={{ width:"100%",maxWidth:300 }} />
+          </div>
+          <div style={{ background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:16,marginBottom:12 }}>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif",fontSize:13,letterSpacing:3,color:C.muted,marginBottom:10 }}>Trend — Last 14</div>
+            {entries.length<2?<div style={{ color:C.muted,fontSize:12,textAlign:"center",padding:16 }}>Need 2+ entries</div>:<canvas ref={trendRef} style={{ width:"100%",display:"block" }} />}
+          </div>
+          <div style={{ display:"flex",gap:16,justifyContent:"center",marginBottom:16 }}>
+            {[["Business",C.business],["Fitness",C.fitness],["Relationships",C.relationships]].map(([l,col])=>(
+              <div key={l} style={{ display:"flex",alignItems:"center",gap:5,fontSize:11,color:C.muted }}>
+                <div style={{ width:8,height:8,borderRadius:"50%",background:col }} />{l}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )}
+
+  {view==="history" && (
+    <div style={{ padding:"14px 22px 0" }}>
+      {!entries.length?<div style={{ padding:40,textAlign:"center",color:C.muted,fontSize:13 }}>No entries yet.</div>:(
+        <div style={{ background:C.card,border:`1px solid ${C.border}`,borderRadius:10,overflow:"hidden" }}>
+          {entries.map((e,i)=>(
+            <div key={i} style={{ padding:"14px 16px",borderBottom:i<entries.length-1?`1px solid ${C.border}`:"none" }}>
+              <div style={{ display:"flex",justifyContent:"space-between",marginBottom:8 }}>
+                <div>
+                  <span style={{ fontSize:10,padding:"2px 7px",borderRadius:3,background:e.type==="daily"?"#1a1a2e":"#1a2e1a",color:e.type==="daily"?"#6e8efb":C.fitness,letterSpacing:1,textTransform:"uppercase" }}>{e.type}</span>
+                  <span style={{ fontSize:12,color:C.muted,marginLeft:8 }}>{e.date}</span>
+                </div>
+                <span style={{ fontFamily:"'Bebas Neue',sans-serif",fontSize:22 }}>{e.overall}%</span>
+              </div>
+              <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6 }}>
+                {["business","fitness","relationships"].map(p=>(
+                  <div key={p}>
+                    <div style={{ display:"flex",justifyContent:"space-between",fontSize:11,color:C.muted,marginBottom:3 }}>
+                      <span style={{ textTransform:"capitalize" }}>{p}</span>
+                      <span style={{ color:PC[p],fontWeight:600 }}>{e[p]}%</span>
+                    </div>
+                    <div style={{ height:3,background:C.border,borderRadius:2 }}>
+                      <div style={{ height:"100%",width:`${e[p]}%`,background:PC[p],borderRadius:2 }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )}
+</div>
+```
+
+);
+}
