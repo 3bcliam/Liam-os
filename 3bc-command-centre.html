@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3BC Command Centre</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:       #0A0A0A;
+  --card:     #141414;
+  --card2:    #1C1C1C;
+  --border:   #2A2A2A;
+  --border2:  #333333;
+  --white:    #FFFFFF;
+  --grey-1:   #F0F0F0;
+  --grey-3:   #AAAAAA;
+  --grey-5:   #666666;
+  --accent:   #E8C547;
+  --accent-d: #B8952A;
+  --green:    #22C55E;
+  --green-d:  #15803D;
+  --green-bg: #052010;
+  --red:      #EF4444;
+  --red-d:    #B91C1C;
+  --red-bg:   #1A0505;
+  --orange:   #F97316;
+  --orange-d: #C2410C;
+  --orange-bg:#1A0A02;
+  --blue:     #3B82F6;
+  --blue-d:   #1D4ED8;
+  --blue-bg:  #030D1F;
+  --purple:   #A855F7;
+  --purple-bg:#0D0518;
+  --teal:     #14B8A6;
+  --teal-bg:  #021210;
+  --r:        8px;
+}
+
+body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;background:var(--bg);color:var(--white);font-size:14px;line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased}
+
+/* ── Header ── */
+.hdr{background:var(--card);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.hdr-logo{font-size:20px;font-weight:900;letter-spacing:-1px;color:var(--accent)}
+.hdr-logo span{color:var(--white);font-weight:400}
+.hdr-date{font-size:10px;color:var(--grey-5);text-align:right;line-height:1.4}
+
+/* ── Nav ── */
+.nav{background:var(--card);display:flex;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--border)}
+.nav::-webkit-scrollbar{display:none}
+.nav-tab{padding:10px 14px;font-size:11px;font-weight:700;color:var(--grey-5);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;letter-spacing:.5px;text-transform:uppercase}
+.nav-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.nav-tab:hover:not(.active){color:var(--white)}
+
+/* ── Layout ── */
+.section{display:none;padding:14px;max-width:600px;margin:0 auto}
+.section.active{display:block}
+
+/* ── Card ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);margin-bottom:12px;overflow:hidden}
+.card-hdr{padding:10px 14px;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--accent);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-body{padding:14px}
+
+/* ── KPI grid ── */
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px}
+.kpi-label{font-size:10px;color:var(--grey-5);font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.kpi-value{font-size:24px;font-weight:900;margin-top:4px;letter-spacing:-1px;line-height:1}
+.kpi-sub{font-size:10px;color:var(--grey-5);margin-top:3px}
+.kpi.green{border-color:var(--green-d);background:var(--green-bg)}
+.kpi.green .kpi-value{color:var(--green)}
+.kpi.red{border-color:var(--red-d);background:var(--red-bg)}
+.kpi.red .kpi-value{color:var(--red)}
+.kpi.orange{border-color:var(--orange-d);background:var(--orange-bg)}
+.kpi.orange .kpi-value{color:var(--orange)}
+.kpi.accent{border-color:var(--accent-d)}
+.kpi.accent .kpi-value{color:var(--accent)}
+.kpi.blue{border-color:var(--blue-d);background:var(--blue-bg)}
+.kpi.blue .kpi-value{color:var(--blue)}
+
+/* ── Forecast ── */
+.forecast-week{margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.forecast-week:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.fw-hdr{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.fw-label{font-size:12px;font-weight:700;color:var(--white)}
+.fw-date{font-size:10px;color:var(--grey-5);margin-top:1px}
+.fw-amount{font-size:16px;font-weight:900}
+.fw-amount.hit{color:var(--green)}
+.fw-amount.miss{color:var(--orange)}
+.fw-amount.zero{color:var(--grey-5)}
+.bar-track{height:6px;background:var(--border2);border-radius:3px;overflow:hidden;margin-bottom:4px}
+.bar-fill{height:100%;border-radius:3px;transition:width .5s ease}
+.bar-fill.hit{background:var(--green)}
+.bar-fill.miss{background:var(--orange)}
+.bar-fill.zero{background:var(--border2)}
+.fw-meta{font-size:10px;color:var(--grey-5)}
+.target-banner{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--card2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:12px}
+.target-banner span{font-size:11px;color:var(--grey-5)}
+.target-banner strong{color:var(--accent);font-size:15px;font-weight:900}
+
+/* ── Job items ── */
+.job-item{padding:11px 0;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:10px}
+.job-item:last-child{border-bottom:none;padding-bottom:0}
+.job-pill{width:4px;min-height:40px;border-radius:2px;flex-shrink:0;margin-top:2px}
+.pill-progress{background:var(--blue)}
+.pill-complete{background:var(--green)}
+.pill-hold{background:var(--purple)}
+.pill-pending{background:var(--grey-5)}
+.job-info{flex:1;min-width:0}
+.job-addr{font-weight:700;font-size:13px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.job-meta{font-size:11px;color:var(--grey-5);margin-top:2px}
+.job-po{font-size:12px;font-weight:700;color:var(--green);margin-top:2px}
+.badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0}
+.badge-progress{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-d)}
+.badge-complete{background:var(--green-bg);color:var(--green);border:1px solid var(--green-d)}
+.badge-hold{background:var(--purple-bg);color:var(--purple);border:1px solid #7C3AED}
+.badge-pending{background:var(--card2);color:var(--grey-5);border:1px solid var(--border)}
+.badge-overdue{background:var(--red-bg);color:var(--red);border:1px solid var(--red-d)}
+
+/* ── Invoice items ── */
+.inv-item{padding:11px 0;border-bottom:1px solid var(--border)}
+.inv-item:last-child{border-bottom:none;padding-bottom:0}
+.inv-row{display:flex;justify-content:space-between;align-items:baseline}
+.inv-num{font-weight:700;font-size:13px;color:var(--white)}
+.inv-amount{font-weight:900;font-size:15px}
+.inv-amount.unpaid{color:var(--accent)}
+.inv-amount.paid{color:var(--green)}
+.inv-amount.overdue{color:var(--red)}
+.inv-meta{font-size:11px;color:var(--grey-5);margin-top:2px}
+.inv-due{font-size:11px;font-weight:700;margin-top:3px}
+.inv-due.overdue{color:var(--red)}
+.inv-due.soon{color:var(--orange)}
+.inv-due.ok{color:var(--grey-5)}
+.inv-due.paid{color:var(--green)}
+
+/* ── Builder items ── */
+.bld-item{padding:11px 0;border-bottom:1px solid var(--border)}
+.bld-item:last-child{border-bottom:none;padding-bottom:0}
+.bld-row{display:flex;justify-content:space-between;align-items:center}
+.bld-name{font-weight:700;font-size:13px}
+.bld-meta{font-size:11px;color:var(--grey-5);margin-top:3px}
+.bld-notes{font-size:11px;color:var(--grey-5);margin-top:3px;font-style:italic}
+
+/* ── Cost items ── */
+.cost-item{padding:10px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start}
+.cost-item:last-child{border-bottom:none;padding-bottom:0}
+.cost-desc{font-size:12px;font-weight:700;color:var(--white)}
+.cost-meta{font-size:10px;color:var(--grey-5);margin-top:2px}
+.cost-amount{font-size:14px;font-weight:900;color:var(--red);margin-left:12px;white-space:nowrap}
+
+/* ── Forms ── */
+.form-group{margin-bottom:11px}
+.form-label{font-size:10px;font-weight:700;color:var(--grey-5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;display:block}
+.form-input,.form-select{width:100%;padding:10px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:6px;font-size:14px;color:var(--white);font-family:inherit;outline:none;transition:border-color .15s;-webkit-appearance:none}
+.form-input::placeholder{color:var(--grey-5)}
+.form-input:focus,.form-select:focus{border-color:var(--accent)}
+.form-select option{background:var(--card2);color:var(--white)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{width:100%;padding:12px;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s;letter-spacing:.3px;font-family:inherit}
+.btn:active{opacity:.8}
+.btn-primary{background:var(--accent);color:var(--bg)}
+.btn-green{background:var(--green);color:var(--bg)}
+.btn-sm{padding:5px 10px;font-size:10px;width:auto;font-weight:700;border-radius:4px;cursor:pointer;border:none;font-family:inherit}
+.btn-ghost{background:var(--card2);color:var(--grey-3);border:1px solid var(--border2)}
+.btn-danger{background:var(--red-bg);color:var(--red);border:1px solid var(--red-d);font-size:10px;padding:4px 8px;border-radius:4px;cursor:pointer;font-weight:700;font-family:inherit}
+
+/* ── Checklist ── */
+.check-item{display:flex;align-items:center;gap:11px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.check-item:last-child{border-bottom:none}
+.check-box{width:22px;height:22px;border:2px solid var(--border2);border-radius:5px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .15s}
+.check-item.done .check-box{background:var(--green);border-color:var(--green);color:var(--bg)}
+.check-label{font-size:13px;color:var(--white);transition:all .15s}
+.check-item.done .check-label{text-decoration:line-through;color:var(--grey-5)}
+
+/* ── Misc ── */
+.empty{text-align:center;padding:28px 16px;color:var(--grey-5)}
+.empty-icon{font-size:32px;margin-bottom:8px}
+.empty-text{font-size:13px}
+.sec-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--grey-5);margin:4px 0 10px}
+.divider{height:1px;background:var(--border);margin:12px 0}
+.select-inline{background:var(--card2);border:1px solid var(--border2);color:var(--white);border-radius:4px;font-size:11px;padding:3px 6px;font-family:inherit;cursor:pointer;-webkit-appearance:none}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--accent);color:var(--bg);padding:10px 20px;border-radius:20px;font-size:13px;font-weight:700;z-index:999;transition:transform .3s ease;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-logo">3BC<span> Command</span></div>
+  <div class="hdr-date" id="hdrDate"></div>
+</div>
+
+<nav class="nav">
+  <div class="nav-tab active"   onclick="showTab('dashboard',this)">Dashboard</div>
+  <div class="nav-tab"          onclick="showTab('forecast',this)">Forecast</div>
+  <div class="nav-tab"          onclick="showTab('jobs',this)">Jobs</div>
+  <div class="nav-tab"          onclick="showTab('invoices',this)">Invoices</div>
+  <div class="nav-tab"          onclick="showTab('builders',this)">Builders</div>
+  <div class="nav-tab"          onclick="showTab('costs',this)">Costs</div>
+  <div class="nav-tab"          onclick="showTab('checklist',this)">Checklist</div>
+</nav>
+
+<!-- DASHBOARD -->
+<div id="tab-dashboard" class="section active">
+  <div class="kpi-grid" id="kpiGrid"></div>
+  <div class="card">
+    <div class="card-hdr">Cash Forecast — Next 30 Days</div>
+    <div class="card-body" id="dashForecast"></div>
+  </div>
+  <div class="card">
+    <div class="card-hdr">Active Jobs</div>
+    <div class="card-body" id="dashJobs"></div>
+  </div>
+  <div class="card">
+    <div class="card-hdr">Outstanding Invoices</div>
+    <div class="card-body" id="dashInvoices"></div>
+  </div>
+</div>
+
+<!-- FORECAST -->
+<div id="tab-forecast" class="section">
+  <div class="target-banner">
+    <div><span>Weekly target</span><br><strong id="targetDisplay">$2,500</strong></div>
+    <button class="btn-sm btn-ghost" onclick="editTarget()">Edit target</button>
+  </div>
+  <div class="card">
+    <div class="card-hdr">30-Day Income Forecast <span style="color:var(--grey-5);font-size:9px;font-weight:400">30-day payment terms</span></div>
+    <div class="card-body" id="forecastBars"></div>
+  </div>
+  <div class="card">
+    <div class="card-hdr">Total Expected</div>
+    <div class="card-body">
+      <div style="font-size:36px;font-weight:900;color:var(--green);letter-spacing:-1px" id="forecastTotal">$0.00</div>
+      <div style="font-size:11px;color:var(--grey-5);margin-top:6px">Unpaid invoices due within 30 days (inc. GST)</div>
+    </div>
+  </div>
+</div>
+
+<!-- JOBS -->
+<div id="tab-jobs" class="section">
+  <div class="card">
+    <div class="card-hdr">Add Job</div>
+    <div class="card-body">
+      <div class="form-group">
+        <label class="form-label">Address / Site</label>
+        <input class="form-input" id="jobAddr" placeholder="e.g. 14 Smith Rd, Gosford">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Builder</label>
+          <input class="form-input" id="jobBld" placeholder="e.g. ARC Projects">
+        </div>
+        <div class="form-group">
+          <label class="form-label">PO Value (ex-GST)</label>
+          <input class="form-input" id="jobPO" type="number" placeholder="0.00">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Start Date</label>
+          <input class="form-input" id="jobStart" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-select" id="jobStatus">
+            <option>Not Started</option>
+            <option>In Progress</option>
+            <option>Completed</option>
+            <option>On Hold</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="addJob()">Add Job</button>
+    </div>
+  </div>
+  <div class="sec-title">All Jobs</div>
+  <div class="card"><div class="card-body" id="jobList"></div></div>
+</div>
+
+<!-- INVOICES -->
+<div id="tab-invoices" class="section">
+  <div class="card">
+    <div class="card-hdr">Add Invoice</div>
+    <div class="card-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Invoice #</label>
+          <input class="form-input" id="invNum" placeholder="INV-001">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Amount (ex-GST)</label>
+          <input class="form-input" id="invAmt" type="number" placeholder="0.00">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Client / Builder</label>
+        <input class="form-input" id="invClient" placeholder="e.g. ARC Projects">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Job / Address</label>
+        <input class="form-input" id="invJob" placeholder="e.g. 14 Smith Rd Gosford">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Date Issued</label>
+          <input class="form-input" id="invDate" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-select" id="invStatus">
+            <option>Unpaid</option>
+            <option>Paid</option>
+            <option>Overdue</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-green" onclick="addInvoice()">Add Invoice</button>
+    </div>
+  </div>
+  <div class="sec-title">All Invoices</div>
+  <div class="card"><div class="card-body" id="invoiceList"></div></div>
+</div>
+
+<!-- BUILDERS -->
+<div id="tab-builders" class="section">
+  <div class="card">
+    <div class="card-hdr">Add Builder</div>
+    <div class="card-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Company</label>
+          <input class="form-input" id="bldName" placeholder="e.g. ARC Projects">
+        </div>
+        <div class="form-group">
+          <label class="form-label">PM Name</label>
+          <input class="form-input" id="bldPM" placeholder="e.g. Ryan Dransfield">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Phone</label>
+          <input class="form-input" id="bldPhone" placeholder="04XX XXX XXX">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-select" id="bldStatus">
+            <option>Active</option>
+            <option>Prospect</option>
+            <option>Dormant</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <input class="form-input" id="bldNotes" placeholder="Last contact, jobs done, follow-up notes...">
+      </div>
+      <button class="btn btn-primary" onclick="addBuilder()">Add Builder</button>
+    </div>
+  </div>
+  <div class="sec-title">Builder Relationships</div>
+  <div class="card"><div class="card-body" id="builderList"></div></div>
+</div>
+
+<!-- COSTS -->
+<div id="tab-costs" class="section">
+  <div class="card">
+    <div class="card-hdr">Log a Cost</div>
+    <div class="card-body">
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <input class="form-input" id="costDesc" placeholder="e.g. Bunnings — framing timber">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Amount ($)</label>
+          <input class="form-input" id="costAmt" type="number" placeholder="0.00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select class="form-select" id="costCat">
+            <option>Materials</option>
+            <option>Labour</option>
+            <option>Subcontractor</option>
+            <option>Vehicle — Fuel</option>
+            <option>Tools</option>
+            <option>Waste Disposal</option>
+            <option>Admin</option>
+            <option>Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Job / Site</label>
+        <input class="form-input" id="costJob" placeholder="e.g. 14 Smith Rd Gosford">
+      </div>
+      <button class="btn btn-primary" onclick="addCost()">Log Cost</button>
+    </div>
+  </div>
+  <div class="sec-title">Recent Costs</div>
+  <div class="card"><div class="card-body" id="costList"></div></div>
+</div>
+
+<!-- CHECKLIST -->
+<div id="tab-checklist" class="section">
+  <div class="card">
+    <div class="card-hdr">☀️ Morning Checklist
+      <button class="btn-sm btn-ghost" onclick="resetChecks('morning')">Reset</button>
+    </div>
+    <div class="card-body" id="cl-morning"></div>
+  </div>
+  <div class="card">
+    <div class="card-hdr">🔨 Job Start
+      <button class="btn-sm btn-ghost" onclick="resetChecks('start')">Reset</button>
+    </div>
+    <div class="card-body" id="cl-start"></div>
+  </div>
+  <div class="card">
+    <div class="card-hdr">✅ Job Complete
+      <button class="btn-sm btn-ghost" onclick="resetChecks('complete')">Reset</button>
+    </div>
+    <div class="card-body" id="cl-complete"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Storage ────────────────────────────────────────────────────────
+const S={
+  get:k=>{try{return JSON.parse(localStorage.getItem(k))}catch{return null}},
+  set:(k,v)=>localStorage.setItem(k,JSON.stringify(v))
+};
+
+// ── State ──────────────────────────────────────────────────────────
+let jobs     = S.get('3bc_jobs')     || [];
+let invoices = S.get('3bc_invoices') || [];
+let builders = S.get('3bc_builders') || [
+  {id:1,name:'ARC Projects',    pm:'Ryan Dransfield',phone:'0431 596 906',status:'Active',  notes:'EOI sent. PO132697 received.'},
+  {id:2,name:'Johns Lyng Group',pm:'',               phone:'',            status:'Prospect',notes:'EOI sent 15 Jun 2026. Follow up 18 Jun.'},
+];
+let costs    = S.get('3bc_costs')    || [];
+let target   = S.get('3bc_target')   || 2500;
+let checks   = S.get('3bc_checks')   || {};
+
+function save(){
+  S.set('3bc_jobs',jobs);S.set('3bc_invoices',invoices);
+  S.set('3bc_builders',builders);S.set('3bc_costs',costs);
+  S.set('3bc_target',target);S.set('3bc_checks',checks);
+}
+
+// ── Helpers ────────────────────────────────────────────────────────
+const fmt=n=>'$'+Number(n||0).toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});
+const uid=()=>Date.now()+Math.random().toString(36).slice(2);
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const getMon=d=>{const x=new Date(d);x.setHours(0,0,0,0);const dy=x.getDay();x.setDate(x.getDate()+(dy===0?-6:1-dy));return x};
+
+function dueDate(inv){if(!inv.date)return null;return addDays(new Date(inv.date),30)}
+function daysUntil(inv){const dd=dueDate(inv);if(!dd)return null;return Math.round((dd-new Date())/86400000)}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2000);
+}
+
+function showTab(id,el){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  el.classList.add('active');
+  render();
+}
+
+// ── Header date ────────────────────────────────────────────────────
+function updateDate(){
+  const d=new Date();
+  document.getElementById('hdrDate').innerHTML=
+    d.toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'})+'<br>'+
+    d.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
+}
+updateDate();setInterval(updateDate,30000);
+
+// ── Forecast ───────────────────────────────────────────────────────
+function buildForecast(){
+  const now=new Date();now.setHours(0,0,0,0);
+  const weeks=[];
+  for(let w=0;w<4;w++){
+    const ws=w===0?getMon(now):addDays(getMon(now),w*7);
+    weeks.push({start:ws,end:addDays(ws,6),total:0,invs:[]});
+  }
+  invoices.filter(i=>i.status!=='Paid').forEach(inv=>{
+    const dd=dueDate(inv);if(!dd)return;
+    weeks.forEach(wk=>{
+      if(dd>=wk.start&&dd<=wk.end){
+        wk.total+=Number(inv.amt||0)*1.1;
+        wk.invs.push(inv);
+      }
+    });
+  });
+  return weeks;
+}
+
+function forecastBarsHTML(weeks){
+  const maxV=Math.max(...weeks.map(w=>w.total),target);
+  const labels=['This week','Next week','Week 3','Week 4'];
+  return weeks.map((wk,i)=>{
+    const pct=maxV>0?Math.min((wk.total/maxV)*100,100):0;
+    const hit=wk.total>=target;
+    const cls=wk.total===0?'zero':hit?'hit':'miss';
+    const dl=`${wk.start.toLocaleDateString('en-AU',{day:'numeric',month:'short'})} – ${wk.end.toLocaleDateString('en-AU',{day:'numeric',month:'short'})}`;
+    return `<div class="forecast-week">
+      <div class="fw-hdr">
+        <div><div class="fw-label">${labels[i]}</div><div class="fw-date">${dl}</div></div>
+        <div class="fw-amount ${cls}">${fmt(wk.total)}</div>
+      </div>
+      <div class="bar-track"><div class="bar-fill ${cls}" style="width:${pct}%"></div></div>
+      <div class="fw-meta">${wk.invs.length===0?'No invoices due':wk.invs.length+' invoice'+(wk.invs.length>1?'s':'')+' due · target '+fmt(target)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Job HTML ───────────────────────────────────────────────────────
+function statusPill(s){
+  if(s==='In Progress') return {pill:'pill-progress',badge:'badge-progress'};
+  if(s==='Completed')   return {pill:'pill-complete', badge:'badge-complete'};
+  if(s==='On Hold')     return {pill:'pill-hold',     badge:'badge-hold'};
+  return                       {pill:'pill-pending',  badge:'badge-pending'};
+}
+
+function jobHTML(j,idx,showControls){
+  const {pill,badge}=statusPill(j.status);
+  return `<div class="job-item">
+    <div class="job-pill ${pill}"></div>
+    <div class="job-info">
+      <div class="job-addr">${j.address}</div>
+      <div class="job-meta">${j.builder||''}${j.start?' · '+new Date(j.start).toLocaleDateString('en-AU'):''}</div>
+      ${j.po?`<div class="job-po">${fmt(j.po)} ex-GST</div>`:''}
+      ${showControls?`<div style="margin-top:6px;display:flex;gap:6px;align-items:center">
+        <select class="select-inline" onchange="updateJobStatus(${idx},this.value)">
+          ${['Not Started','In Progress','Completed','On Hold'].map(s=>`<option ${j.status===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+        <button class="btn-danger" onclick="deleteJob(${idx})">Remove</button>
+      </div>`:''}
+    </div>
+    <span class="badge ${badge}">${j.status}</span>
+  </div>`;
+}
+
+// ── Invoice HTML ───────────────────────────────────────────────────
+function invHTML(inv,idx,showControls){
+  const days=daysUntil(inv);
+  let dueClass='ok',dueText='';
+  if(inv.status==='Paid'){dueClass='paid';dueText='Paid ✓';}
+  else if(days===null){dueText='No date set';}
+  else if(days<0){dueClass='overdue';dueText=Math.abs(days)+'d overdue';}
+  else if(days<=5){dueClass='soon';dueText='Due in '+days+'d';}
+  else{dueText='Due '+dueDate(inv).toLocaleDateString('en-AU');}
+  const amtClass=inv.status==='Paid'?'paid':inv.status==='Overdue'?'overdue':'unpaid';
+  return `<div class="inv-item">
+    <div class="inv-row">
+      <span class="inv-num">${inv.num}</span>
+      <span class="inv-amount ${amtClass}">${fmt(Number(inv.amt||0)*1.1)}</span>
+    </div>
+    <div class="inv-meta">${inv.client||''}${inv.job?' · '+inv.job:''}</div>
+    <div class="inv-due ${dueClass}">${dueText}</div>
+    ${showControls?`<div style="margin-top:6px;display:flex;gap:6px">
+      <select class="select-inline" onchange="updateInvStatus(${idx},this.value)">
+        ${['Unpaid','Paid','Overdue'].map(s=>`<option ${inv.status===s?'selected':''}>${s}</option>`).join('')}
+      </select>
+      <button class="btn-danger" onclick="deleteInv(${idx})">Remove</button>
+    </div>`:''}
+  </div>`;
+}
+
+// ── Builder HTML ───────────────────────────────────────────────────
+function bldHTML(b,i){
+  const sc=b.status==='Active'?'badge-complete':b.status==='Prospect'?'badge-progress':'badge-pending';
+  return `<div class="bld-item">
+    <div class="bld-row">
+      <span class="bld-name">${b.name}</span>
+      <span class="badge ${sc}">${b.status}</span>
+    </div>
+    <div class="bld-meta">${b.pm||''}${b.phone?' · '+b.phone:''}</div>
+    ${b.notes?`<div class="bld-notes">${b.notes}</div>`:''}
+    <div style="margin-top:6px;display:flex;gap:6px">
+      <select class="select-inline" onchange="updateBldStatus(${i},this.value)">
+        ${['Active','Prospect','Dormant'].map(s=>`<option ${b.status===s?'selected':''}>${s}</option>`).join('')}
+      </select>
+      <button class="btn-danger" onclick="deleteBld(${i})">Remove</button>
+    </div>
+  </div>`;
+}
+
+// ── Cost HTML ──────────────────────────────────────────────────────
+function costHTML(c,i){
+  return `<div class="cost-item">
+    <div>
+      <div class="cost-desc">${c.desc}</div>
+      <div class="cost-meta">${c.cat} · ${c.job||'No job'}</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span class="cost-amount">${fmt(c.amt)}</span>
+      <button class="btn-danger" onclick="deleteCost(${i})">✕</button>
+    </div>
+  </div>`;
+}
+
+// ── Render dashboard ───────────────────────────────────────────────
+function renderDashboard(){
+  const activeJobs   = jobs.filter(j=>j.status==='In Progress').length;
+  const overdue      = invoices.filter(i=>i.status!=='Paid'&&daysUntil(i)!==null&&daysUntil(i)<0).length;
+  const totalPO      = jobs.reduce((s,j)=>s+Number(j.po||0),0);
+  const weeks        = buildForecast();
+  const next30       = weeks.reduce((s,w)=>s+w.total,0);
+  const onTrack      = next30>=target*4;
+
+  document.getElementById('kpiGrid').innerHTML=`
+    <div class="kpi blue"><div class="kpi-label">Active Jobs</div><div class="kpi-value">${activeJobs}</div><div class="kpi-sub">In progress</div></div>
+    <div class="kpi ${overdue>0?'red':'green'}"><div class="kpi-label">Overdue</div><div class="kpi-value">${overdue}</div><div class="kpi-sub">${overdue>0?'Chase now':'All clear'}</div></div>
+    <div class="kpi accent"><div class="kpi-label">PO Pipeline</div><div class="kpi-value" style="font-size:18px">${fmt(totalPO)}</div><div class="kpi-sub">Total PO value</div></div>
+    <div class="kpi ${onTrack?'green':'orange'}"><div class="kpi-label">Next 30 Days</div><div class="kpi-value" style="font-size:18px">${fmt(next30)}</div><div class="kpi-sub">${onTrack?'On track':'Below target'}</div></div>
+  `;
+
+  document.getElementById('dashForecast').innerHTML=forecastBarsHTML(weeks);
+
+  const activeJ=jobs.filter(j=>j.status!=='Completed').slice(0,5);
+  document.getElementById('dashJobs').innerHTML=activeJ.length===0
+    ?'<div class="empty"><div class="empty-icon">🔨</div><div class="empty-text">No active jobs. Add one in Jobs.</div></div>'
+    :activeJ.map((j,i)=>jobHTML(j,i,false)).join('');
+
+  const unpaid=invoices.filter(i=>i.status!=='Paid').slice(0,5);
+  document.getElementById('dashInvoices').innerHTML=unpaid.length===0
+    ?'<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">No outstanding invoices.</div></div>'
+    :unpaid.map((inv,i)=>invHTML(inv,i,false)).join('');
+}
+
+// ── Render forecast ────────────────────────────────────────────────
+function renderForecast(){
+  const weeks=buildForecast();
+  const total=weeks.reduce((s,w)=>s+w.total,0);
+  document.getElementById('forecastTotal').textContent=fmt(total);
+  document.getElementById('targetDisplay').textContent=fmt(target);
+  document.getElementById('forecastBars').innerHTML=forecastBarsHTML(weeks);
+}
+
+// ── Render jobs ────────────────────────────────────────────────────
+function renderJobs(){
+  const el=document.getElementById('jobList');
+  el.innerHTML=jobs.length===0
+    ?'<div class="empty"><div class="empty-icon">🔨</div><div class="empty-text">No jobs yet.</div></div>'
+    :jobs.slice().reverse().map((j,ri)=>jobHTML(j,jobs.length-1-ri,true)).join('');
+}
+
+function addJob(){
+  const addr=document.getElementById('jobAddr').value.trim();
+  if(!addr){showToast('Enter a job address');return;}
+  jobs.push({id:uid(),address:addr,builder:document.getElementById('jobBld').value.trim(),
+    po:document.getElementById('jobPO').value,start:document.getElementById('jobStart').value,
+    status:document.getElementById('jobStatus').value});
+  save();showToast('Job added ✓');
+  ['jobAddr','jobBld','jobPO','jobStart'].forEach(id=>document.getElementById(id).value='');
+  renderJobs();renderDashboard();
+}
+function updateJobStatus(i,s){jobs[i].status=s;save();renderDashboard();}
+function deleteJob(i){if(!confirm('Remove job?'))return;jobs.splice(i,1);save();renderJobs();renderDashboard();}
+
+// ── Render invoices ────────────────────────────────────────────────
+function renderInvoices(){
+  const el=document.getElementById('invoiceList');
+  el.innerHTML=invoices.length===0
+    ?'<div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No invoices yet.</div></div>'
+    :invoices.slice().reverse().map((inv,ri)=>invHTML(inv,invoices.length-1-ri,true)).join('');
+}
+
+function addInvoice(){
+  const num=document.getElementById('invNum').value.trim();
+  const amt=document.getElementById('invAmt').value;
+  if(!num||!amt){showToast('Enter invoice number and amount');return;}
+  invoices.push({id:uid(),num,amt,client:document.getElementById('invClient').value.trim(),
+    job:document.getElementById('invJob').value.trim(),date:document.getElementById('invDate').value,
+    status:document.getElementById('invStatus').value});
+  save();showToast('Invoice added ✓');
+  ['invNum','invAmt','invClient','invJob','invDate'].forEach(id=>document.getElementById(id).value='');
+  renderInvoices();renderDashboard();renderForecast();
+}
+function updateInvStatus(i,s){invoices[i].status=s;save();renderDashboard();renderForecast();}
+function deleteInv(i){if(!confirm('Remove invoice?'))return;invoices.splice(i,1);save();renderInvoices();renderDashboard();renderForecast();}
+
+// ── Render builders ────────────────────────────────────────────────
+function renderBuilders(){
+  const el=document.getElementById('builderList');
+  el.innerHTML=builders.length===0
+    ?'<div class="empty"><div class="empty-icon">🤝</div><div class="empty-text">No builders yet.</div></div>'
+    :builders.map((b,i)=>bldHTML(b,i)).join('');
+}
+
+function addBuilder(){
+  const name=document.getElementById('bldName').value.trim();
+  if(!name){showToast('Enter a builder name');return;}
+  builders.push({id:uid(),name,pm:document.getElementById('bldPM').value.trim(),
+    phone:document.getElementById('bldPhone').value.trim(),
+    status:document.getElementById('bldStatus').value,
+    notes:document.getElementById('bldNotes').value.trim()});
+  save();showToast('Builder added ✓');
+  ['bldName','bldPM','bldPhone','bldNotes'].forEach(id=>document.getElementById(id).value='');
+  renderBuilders();
+}
+function updateBldStatus(i,s){builders[i].status=s;save();}
+function deleteBld(i){if(!confirm('Remove builder?'))return;builders.splice(i,1);save();renderBuilders();}
+
+// ── Render costs ───────────────────────────────────────────────────
+function renderCosts(){
+  const el=document.getElementById('costList');
+  const recent=costs.slice().reverse().slice(0,30);
+  el.innerHTML=recent.length===0
+    ?'<div class="empty"><div class="empty-icon">💰</div><div class="empty-text">No costs logged yet.</div></div>'
+    :recent.map((c,ri)=>costHTML(c,costs.length-1-ri)).join('');
+}
+
+function addCost(){
+  const desc=document.getElementById('costDesc').value.trim();
+  const amt=document.getElementById('costAmt').value;
+  if(!desc||!amt){showToast('Enter description and amount');return;}
+  costs.push({id:uid(),desc,amt,cat:document.getElementById('costCat').value,
+    job:document.getElementById('costJob').value.trim(),date:new Date().toISOString()});
+  save();showToast('Cost logged ✓');
+  ['costDesc','costAmt','costJob'].forEach(id=>document.getElementById(id).value='');
+  renderCosts();
+}
+function deleteCost(i){costs.splice(i,1);save();renderCosts();}
+
+// ── Checklists ─────────────────────────────────────────────────────
+const CL={
+  morning:['Open ServiceM8 — what jobs are on today?','Check messages & emails — any builder comms?','Any invoices to send from yesterday?','Check cash position — anything overdue to chase?','Pack tools & materials for today'],
+  start:['Review PO & scope thoroughly','Site inspection & measure up','Complete SWMS & risk assessment','Take before photos (every area)','Order all materials before starting','Confirm start date with builder PM','Log job in Master Business System'],
+  complete:['Take completion photos (every area)','Site clean-up to a high standard','Confirm sign-off with builder PM','Raise & send invoice same day','Log all costs in Master System','Update job status to Completed','Ask PM for feedback / more work'],
+};
+
+function renderChecklists(){
+  Object.entries(CL).forEach(([key,items])=>{
+    document.getElementById('cl-'+key).innerHTML=items.map((item,i)=>{
+      const done=checks[key+i];
+      return `<div class="check-item ${done?'done':''}" onclick="toggleCheck('${key}',${i},this)">
+        <div class="check-box">${done?'✓':''}</div>
+        <span class="check-label">${item}</span>
+      </div>`;
+    }).join('');
+  });
+}
+
+function toggleCheck(key,i,el){
+  checks[key+i]=!checks[key+i];save();
+  el.classList.toggle('done',checks[key+i]);
+  el.querySelector('.check-box').textContent=checks[key+i]?'✓':'';
+}
+function resetChecks(key){
+  Object.keys(checks).filter(k=>k.startsWith(key)).forEach(k=>delete checks[k]);
+  save();renderChecklists();showToast('Reset ✓');
+}
+
+function editTarget(){
+  const v=prompt('Weekly income target ($):',target);
+  if(v&&!isNaN(v)){target=Number(v);save();renderForecast();renderDashboard();showToast('Target updated ✓');}
+}
+
+// ── Init ───────────────────────────────────────────────────────────
+function render(){renderDashboard();renderForecast();renderJobs();renderInvoices();renderBuilders();renderCosts();renderChecklists();}
+render();
+</script>
+</body>
+</html>
